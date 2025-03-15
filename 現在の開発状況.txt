@@ -1,0 +1,1225 @@
+<ディレクトリ構造>
+├── .DS_Store
+├── .bolt
+│   ├── config.json
+│   └── prompt
+├── .gitignore
+├── 99_ファイル収集.py
+├── dist
+│   ├── assets
+│   │   ├── index-DDkT3wZQ.js
+│   │   └── index-Lm1y7aEx.css
+│   └── index.html
+├── eslint.config.js
+├── index.html
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── src
+│   ├── App.tsx
+│   ├── components
+│   │   ├── CommandManager.tsx
+│   │   ├── FileTransfer.tsx
+│   │   ├── LocalTerminal.tsx
+│   │   ├── Login.tsx
+│   │   ├── Notepad.tsx
+│   │   ├── SSHTerminal.tsx
+│   │   └── SettingsPage.tsx
+│   ├── index.css
+│   ├── main.tsx
+│   └── vite-env.d.ts
+├── tailwind.config.js
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+├── vite.config.ts
+└── 現在の開発状況.txt
+</ディレクトリ構造>
+
+<ファイルパス>/home/nishio/project/index.html</ファイルパス>
+<ファイル中身>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + React + TS</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/postcss.config.js</ファイルパス>
+<ファイル中身>
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/vite.config.ts</ファイルパス>
+<ファイル中身>
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  optimizeDeps: {
+    exclude: ['lucide-react'],
+  },
+});
+
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/tailwind.config.js</ファイルパス>
+<ファイル中身>
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/eslint.config.js</ファイルパス>
+<ファイル中身>
+import js from '@eslint/js';
+import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  { ignores: ['dist'] },
+  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+    },
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true },
+      ],
+    },
+  }
+);
+
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/dist/index.html</ファイルパス>
+<ファイル中身>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + React + TS</title>
+    <script type="module" crossorigin src="/assets/index-DDkT3wZQ.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Lm1y7aEx.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
+
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/src/vite-env.d.ts</ファイルパス>
+<ファイル中身>
+/// <reference types="vite/client" />
+
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/src/App.tsx</ファイルパス>
+<ファイル中身>
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { Terminal, FileUp, Home, Power, Activity, Command, Notebook, Settings, LogOut, MonitorDot } from 'lucide-react';
+import SSHTerminal from './components/SSHTerminal';
+import FileTransfer from './components/FileTransfer';
+import CommandManager from './components/CommandManager';
+import Notepad from './components/Notepad';
+import LocalTerminal from './components/LocalTerminal';
+import SettingsPage from './components/SettingsPage';
+import Login from './components/Login';
+
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('isAuthenticated') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('isAuthenticated', isAuthenticated.toString());
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) {
+    return <Login onLogin={() => setIsAuthenticated(true)} />;
+  }
+
+  return (
+    <BrowserRouter>
+      <div className="min-h-screen cyber-gradient text-gray-300 flex">
+        {/* Sidebar */}
+        <div className="w-72 bg-gray-900/50 backdrop-blur-sm p-6 border-r border-[#00ff9d]/20">
+          <div className="mb-12">
+            <div className="flex items-center justify-center mb-4">
+              <Power className="w-8 h-8 text-[#00ff9d] mr-3" />
+              <h1 className="text-2xl font-bold cyber-text text-[#00ff9d]">HOME CONSOLE</h1>
+            </div>
+            <div className="flex items-center justify-center">
+              <Activity className="w-4 h-4 text-[#00ff9d] mr-2" />
+              <p className="text-sm text-[#00ff9d]/70">SYSTEM ONLINE</p>
+            </div>
+          </div>
+          
+          <nav className="space-y-3">
+            <NavLink to="/" icon={<Home className="w-5 h-5" />} text="ホーム" />
+            <NavLink to="/terminal" icon={<Terminal className="w-5 h-5" />} text="SSH ターミナル" />
+            <NavLink to="/local-terminal" icon={<MonitorDot className="w-5 h-5" />} text="ローカルターミナル" />
+            <NavLink to="/file-transfer" icon={<FileUp className="w-5 h-5" />} text="ファイル転送" />
+            <NavLink to="/commands" icon={<Command className="w-5 h-5" />} text="コマンド管理" />
+            <NavLink to="/notepad" icon={<Notebook className="w-5 h-5" />} text="メモ帳" />
+            <NavLink to="/settings" icon={<Settings className="w-5 h-5" />} text="設定" />
+            <button
+              onClick={() => setIsAuthenticated(false)}
+              className="flex items-center space-x-3 p-4 rounded-lg cyber-border transition-all duration-300 w-full hover:bg-red-900/20 hover:text-red-400 hover:border-red-400/30"
+            >
+              <LogOut className="w-5 h-5" />
+              <span>ログアウト</span>
+            </button>
+          </nav>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 p-8">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/terminal" element={<SSHTerminal />} />
+            <Route path="/local-terminal" element={<LocalTerminal />} />
+            <Route path="/file-transfer" element={<FileTransfer />} />
+            <Route path="/commands" element={<CommandManager />} />
+            <Route path="/notepad" element={<Notepad />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+function NavLink({ to, icon, text }: { to: string; icon: React.ReactNode; text: string }) {
+  const location = useLocation();
+  const isActive = location.pathname === to;
+  
+  return (
+    <Link
+      to={to}
+      className={`flex items-center space-x-3 p-4 rounded-lg cyber-border transition-all duration-300 ${
+        isActive 
+          ? 'bg-[#00ff9d]/10 text-[#00ff9d] border-[#00ff9d]/50' 
+          : 'hover:bg-[#00ff9d]/5 hover:text-[#00ff9d] hover:border-[#00ff9d]/30'
+      }`}
+    >
+      {icon}
+      <span>{text}</span>
+    </Link>
+  );
+}
+
+function HomePage() {
+  return (
+    <div className="max-w-4xl mx-auto">
+      <h2 className="text-4xl font-bold mb-8 text-center cyber-text text-[#00ff9d]">システムコントロール</h2>
+      <p className="text-gray-400 text-center mb-12 text-lg">
+        セキュアな接続でシステムを管理します。
+        必要な操作を選択してください。
+      </p>
+      
+      <div className="grid grid-cols-2 gap-8">
+        <Link
+          to="/terminal"
+          className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-8 hover:bg-[#00ff9d]/5 transition-all duration-300 group"
+        >
+          <Terminal className="w-16 h-16 mx-auto mb-6 text-[#00ff9d] group-hover:animate-pulse" />
+          <h3 className="text-2xl font-semibold mb-4 text-center text-[#00ff9d]">SSHターミナル</h3>
+          <p className="text-gray-400 text-center">
+            リモートサーバーへのセキュアな接続と
+            コマンドラインインターフェース
+          </p>
+        </Link>
+
+        <Link
+          to="/local-terminal"
+          className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-8 hover:bg-[#00ff9d]/5 transition-all duration-300 group"
+        >
+          <MonitorDot className="w-16 h-16 mx-auto mb-6 text-[#00ff9d] group-hover:animate-pulse" />
+          <h3 className="text-2xl font-semibold mb-4 text-center text-[#00ff9d]">ローカルターミナル</h3>
+          <p className="text-gray-400 text-center">
+            マイコンソールサーバーの
+            ターミナルアクセス
+          </p>
+        </Link>
+        
+        <Link
+          to="/file-transfer"
+          className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-8 hover:bg-[#00ff9d]/5 transition-all duration-300 group"
+        >
+          <FileUp className="w-16 h-16 mx-auto mb-6 text-[#00ff9d] group-hover:animate-pulse" />
+          <h3 className="text-2xl font-semibold mb-4 text-center text-[#00ff9d]">ファイル転送</h3>
+          <p className="text-gray-400 text-center">
+            SSHプロトコルを使用した
+            安全なファイル転送システム
+          </p>
+        </Link>
+
+        <Link
+          to="/commands"
+          className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-8 hover:bg-[#00ff9d]/5 transition-all duration-300 group"
+        >
+          <Command className="w-16 h-16 mx-auto mb-6 text-[#00ff9d] group-hover:animate-pulse" />
+          <h3 className="text-2xl font-semibold mb-4 text-center text-[#00ff9d]">コマンド管理</h3>
+          <p className="text-gray-400 text-center">
+            よく使うコマンドを保存して
+            簡単に実行
+          </p>
+        </Link>
+
+        <Link
+          to="/notepad"
+          className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-8 hover:bg-[#00ff9d]/5 transition-all duration-300 group"
+        >
+          <Notebook className="w-16 h-16 mx-auto mb-6 text-[#00ff9d] group-hover:animate-pulse" />
+          <h3 className="text-2xl font-semibold mb-4 text-center text-[#00ff9d]">メモ帳</h3>
+          <p className="text-gray-400 text-center">
+            システム管理に必要な
+            メモを保存
+          </p>
+        </Link>
+
+        <Link
+          to="/settings"
+          className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-8 hover:bg-[#00ff9d]/5 transition-all duration-300 group"
+        >
+          <Settings className="w-16 h-16 mx-auto mb-6 text-[#00ff9d] group-hover:animate-pulse" />
+          <h3 className="text-2xl font-semibold mb-4 text-center text-[#00ff9d]">設定</h3>
+          <p className="text-gray-400 text-center">
+            システム設定の
+            カスタマイズ
+          </p>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+export default App;
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/src/main.tsx</ファイルパス>
+<ファイル中身>
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App.tsx';
+import './index.css';
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
+
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/src/components/SSHTerminal.tsx</ファイルパス>
+<ファイル中身>
+import React, { useEffect, useRef, useState } from 'react';
+import { Terminal as XTerm } from 'xterm';
+import { FitAddon } from 'xterm-addon-fit';
+import { WebLinksAddon } from 'xterm-addon-web-links';
+import { WebglAddon } from 'xterm-addon-webgl';
+import { Plus, Trash2, Power } from 'lucide-react';
+import 'xterm/css/xterm.css';
+
+interface Server {
+  id: string;
+  name: string;
+  host: string;
+}
+
+function SSHTerminal() {
+  const [servers, setServers] = useState<Server[]>(() => {
+    const saved = localStorage.getItem('sshServers');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [selectedServer, setSelectedServer] = useState<Server | null>(null);
+  const [isAddingServer, setIsAddingServer] = useState(false);
+  const [newServer, setNewServer] = useState({ name: '', host: '' });
+  
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const xtermRef = useRef<XTerm | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('sshServers', JSON.stringify(servers));
+  }, [servers]);
+
+  useEffect(() => {
+    if (terminalRef.current && !xtermRef.current) {
+      const term = new XTerm({
+        theme: {
+          background: '#0a0b14',
+          foreground: '#00ff9d',
+          cursor: '#00ff9d',
+          selection: 'rgba(0, 255, 157, 0.3)',
+          black: '#1a1b26',
+          blue: '#7aa2f7',
+          cyan: '#7dcfff',
+          green: '#00ff9d',
+          magenta: '#bb9af7',
+          red: '#f7768e',
+          white: '#c0caf5',
+          yellow: '#e0af68'
+        },
+        fontSize: 14,
+        fontFamily: 'monospace',
+        cursorBlink: true,
+        allowTransparency: true
+      });
+      
+      const fitAddon = new FitAddon();
+      const webLinksAddon = new WebLinksAddon();
+      const webglAddon = new WebglAddon();
+      
+      term.loadAddon(fitAddon);
+      term.loadAddon(webLinksAddon);
+      term.loadAddon(webglAddon);
+      
+      xtermRef.current = term;
+      fitAddonRef.current = fitAddon;
+      
+      term.open(terminalRef.current);
+      
+      setTimeout(() => {
+        fitAddon.fit();
+      }, 0);
+
+      term.writeln('\x1b[32m╔════════════════════════════════════╗\x1b[0m');
+      term.writeln('\x1b[32m║      HOME CONSOLE - SSH TERMINAL    ║\x1b[0m');
+      term.writeln('\x1b[32m╚════════════════════════════════════╝\x1b[0m');
+      term.writeln('');
+      term.writeln('\x1b[36m接続待機中...\x1b[0m');
+      term.writeln('\x1b[33mサーバーを選択してください\x1b[0m');
+
+      const handleResize = () => {
+        if (fitAddonRef.current) {
+          fitAddonRef.current.fit();
+        }
+      };
+
+      window.addEventListener('resize', handleResize);
+
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        if (xtermRef.current) {
+          xtermRef.current.dispose();
+        }
+      };
+    }
+  }, []);
+
+  const handleAddServer = () => {
+    if (newServer.name && newServer.host) {
+      setServers([...servers, { ...newServer, id: Date.now().toString() }]);
+      setNewServer({ name: '', host: '' });
+      setIsAddingServer(false);
+    }
+  };
+
+  const handleDeleteServer = (id: string) => {
+    setServers(servers.filter(server => server.id !== id));
+    if (selectedServer?.id === id) {
+      setSelectedServer(null);
+    }
+  };
+
+  const handleConnect = (server: Server) => {
+    setSelectedServer(server);
+    if (xtermRef.current) {
+      xtermRef.current.clear();
+      xtermRef.current.writeln(`\x1b[36m${server.name} (${server.host}) に接続中...\x1b[0m`);
+      // Here you would implement the actual SSH connection
+    }
+  };
+
+  return (
+    <div className="h-full">
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold mb-2 cyber-text text-[#00ff9d]">SSHターミナル</h2>
+        <p className="text-gray-400">セキュアなリモート接続インターフェース</p>
+      </div>
+
+      <div className="grid grid-cols-4 gap-8">
+        <div className="col-span-1 space-y-4">
+          <div className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-[#00ff9d] font-semibold">サーバー一覧</h3>
+              <button
+                onClick={() => setIsAddingServer(true)}
+                className="p-2 cyber-border bg-[#00ff9d]/10 rounded-lg hover:bg-[#00ff9d]/20 transition-all duration-300"
+              >
+                <Plus className="w-4 h-4 text-[#00ff9d]" />
+              </button>
+            </div>
+
+            {isAddingServer && (
+              <div className="mb-4 space-y-3">
+                <input
+                  type="text"
+                  placeholder="サーバー名"
+                  value={newServer.name}
+                  onChange={(e) => setNewServer({ ...newServer, name: e.target.value })}
+                  className="w-full bg-gray-900/80 p-2 rounded cyber-border border-[#00ff9d]/30 text-gray-300"
+                />
+                <input
+                  type="text"
+                  placeholder="ホスト名/IP"
+                  value={newServer.host}
+                  onChange={(e) => setNewServer({ ...newServer, host: e.target.value })}
+                  className="w-full bg-gray-900/80 p-2 rounded cyber-border border-[#00ff9d]/30 text-gray-300"
+                />
+                <div className="flex space-x-2">
+                  <button
+                    onClick={handleAddServer}
+                    className="flex-1 p-2 cyber-border bg-[#00ff9d]/10 rounded-lg hover:bg-[#00ff9d]/20 transition-all duration-300 text-[#00ff9d]"
+                  >
+                    追加
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsAddingServer(false);
+                      setNewServer({ name: '', host: '' });
+                    }}
+                    className="p-2 cyber-border bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-all duration-300 text-gray-400"
+                  >
+                    キャンセル
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {servers.map(server => (
+                <div
+                  key={server.id}
+                  className={`p-3 rounded-lg cyber-border transition-all duration-300 ${
+                    selectedServer?.id === server.id
+                      ? 'bg-[#00ff9d]/10 border-[#00ff9d]/50'
+                      : 'hover:bg-[#00ff9d]/5'
+                  }`}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="text-[#00ff9d] font-medium">{server.name}</h4>
+                      <p className="text-gray-400 text-sm">{server.host}</p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleConnect(server)}
+                        className="p-1.5 cyber-border bg-[#00ff9d]/10 rounded-lg hover:bg-[#00ff9d]/20 transition-all duration-300"
+                      >
+                        <Power className="w-4 h-4 text-[#00ff9d]" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteServer(server.id)}
+                        className="p-1.5 cyber-border bg-red-900/20 rounded-lg hover:bg-red-900/40 transition-all duration-300"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="col-span-3">
+          <div className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-4 h-[calc(100vh-12rem)] relative terminal-container">
+            <div ref={terminalRef} className="h-full" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default SSHTerminal;
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/src/components/CommandManager.tsx</ファイルパス>
+<ファイル中身>
+import React, { useState, useEffect } from 'react';
+import { Play, Trash2, Edit2, Save, Plus, X } from 'lucide-react';
+
+interface Command {
+  id: string;
+  name: string;
+  command: string;
+}
+
+function CommandManager() {
+  const [commands, setCommands] = useState<Command[]>(() => {
+    const saved = localStorage.getItem('savedCommands');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [newCommand, setNewCommand] = useState({ name: '', command: '' });
+  const [isAdding, setIsAdding] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('savedCommands', JSON.stringify(commands));
+  }, [commands]);
+
+  const handleSave = (command: Command) => {
+    if (editingId) {
+      setCommands(commands.map(c => c.id === editingId ? command : c));
+      setEditingId(null);
+    } else {
+      setCommands([...commands, { ...command, id: Date.now().toString() }]);
+      setIsAdding(false);
+    }
+    setNewCommand({ name: '', command: '' });
+  };
+
+  const handleDelete = (id: string) => {
+    setCommands(commands.filter(c => c.id !== id));
+  };
+
+  const handleExecute = async (command: string) => {
+    try {
+      // Here you would implement the actual command execution
+      console.log('Executing command:', command);
+      // For demonstration purposes, we'll just show an alert
+      alert(`コマンドを実行: ${command}`);
+    } catch (error) {
+      console.error('Command execution failed:', error);
+    }
+  };
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold mb-2 cyber-text text-[#00ff9d]">コマンド管理</h2>
+        <p className="text-gray-400">よく使うコマンドを保存して実行</p>
+      </div>
+
+      <div className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-8">
+        <div className="mb-6 flex justify-between items-center">
+          <h3 className="text-xl font-semibold text-[#00ff9d]">保存されたコマンド</h3>
+          <button
+            onClick={() => setIsAdding(true)}
+            className="flex items-center space-x-2 px-4 py-2 cyber-border bg-[#00ff9d]/10 rounded-lg hover:bg-[#00ff9d]/20 transition-all duration-300"
+          >
+            <Plus className="w-4 h-4 text-[#00ff9d]" />
+            <span className="text-[#00ff9d]">新規作成</span>
+          </button>
+        </div>
+
+        {isAdding && (
+          <div className="mb-6 cyber-border bg-gray-900/80 p-4 rounded-lg">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-[#00ff9d]">新規コマンド</h4>
+              <button
+                onClick={() => {
+                  setIsAdding(false);
+                  setNewCommand({ name: '', command: '' });
+                }}
+                className="text-gray-400 hover:text-[#00ff9d]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="コマンド名"
+                value={newCommand.name}
+                onChange={(e) => setNewCommand({ ...newCommand, name: e.target.value })}
+                className="w-full bg-gray-900/80 p-2 rounded cyber-border border-[#00ff9d]/30 text-gray-300"
+              />
+              <input
+                type="text"
+                placeholder="コマンド"
+                value={newCommand.command}
+                onChange={(e) => setNewCommand({ ...newCommand, command: e.target.value })}
+                className="w-full bg-gray-900/80 p-2 rounded cyber-border border-[#00ff9d]/30 text-gray-300"
+              />
+              <button
+                onClick={() => handleSave(newCommand as Command)}
+                className="flex items-center space-x-2 px-4 py-2 cyber-border bg-[#00ff9d]/10 rounded-lg hover:bg-[#00ff9d]/20 transition-all duration-300"
+              >
+                <Save className="w-4 h-4 text-[#00ff9d]" />
+                <span className="text-[#00ff9d]">保存</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {commands.map((cmd) => (
+            <div key={cmd.id} className="cyber-border bg-gray-900/80 p-4 rounded-lg">
+              {editingId === cmd.id ? (
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    value={newCommand.name}
+                    onChange={(e) => setNewCommand({ ...newCommand, name: e.target.value })}
+                    className="w-full bg-gray-900/80 p-2 rounded cyber-border border-[#00ff9d]/30 text-gray-300"
+                  />
+                  <input
+                    type="text"
+                    value={newCommand.command}
+                    onChange={(e) => setNewCommand({ ...newCommand, command: e.target.value })}
+                    className="w-full bg-gray-900/80 p-2 rounded cyber-border border-[#00ff9d]/30 text-gray-300"
+                  />
+                  <button
+                    onClick={() => handleSave({ ...newCommand, id: cmd.id })}
+                    className="flex items-center space-x-2 px-4 py-2 cyber-border bg-[#00ff9d]/10 rounded-lg hover:bg-[#00ff9d]/20 transition-all duration-300"
+                  >
+                    <Save className="w-4 h-4 text-[#00ff9d]" />
+                    <span className="text-[#00ff9d]">保存</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-[#00ff9d] font-medium mb-1">{cmd.name}</h4>
+                    <code className="text-gray-400 text-sm">{cmd.command}</code>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleExecute(cmd.command)}
+                      className="p-2 cyber-border bg-[#00ff9d]/10 rounded-lg hover:bg-[#00ff9d]/20 transition-all duration-300"
+                    >
+                      <Play className="w-4 h-4 text-[#00ff9d]" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingId(cmd.id);
+                        setNewCommand({ name: cmd.name, command: cmd.command });
+                      }}
+                      className="p-2 cyber-border bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-all duration-300"
+                    >
+                      <Edit2 className="w-4 h-4 text-[#00ff9d]" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(cmd.id)}
+                      className="p-2 cyber-border bg-red-900/20 rounded-lg hover:bg-red-900/40 transition-all duration-300"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default CommandManager;
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/src/components/SettingsPage.tsx</ファイルパス>
+<ファイル中身>
+import React from 'react';
+import { Settings } from 'lucide-react';
+
+function SettingsPage() {
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold mb-2 cyber-text text-[#00ff9d]">設定</h2>
+        <p className="text-gray-400">システム設定のカスタマイズ</p>
+      </div>
+
+      <div className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-8">
+        <div className="flex items-center justify-center">
+          <Settings className="w-24 h-24 text-[#00ff9d] opacity-50" />
+        </div>
+        <p className="text-center text-gray-400 mt-6">
+          設定機能は現在準備中です。
+          <br />
+          今後のアップデートをお待ちください。
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default SettingsPage;
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/src/components/Notepad.tsx</ファイルパス>
+<ファイル中身>
+import React, { useState, useEffect } from 'react';
+import { Save, Trash2, Plus, X } from 'lucide-react';
+
+interface Note {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+}
+
+function Notepad() {
+  const [notes, setNotes] = useState<Note[]>(() => {
+    const saved = localStorage.getItem('savedNotes');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [currentNote, setCurrentNote] = useState<Note | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('savedNotes', JSON.stringify(notes));
+  }, [notes]);
+
+  const handleSave = () => {
+    if (currentNote) {
+      if (currentNote.id) {
+        setNotes(notes.map(note => 
+          note.id === currentNote.id ? currentNote : note
+        ));
+      } else {
+        setNotes([...notes, {
+          ...currentNote,
+          id: Date.now().toString(),
+          createdAt: new Date().toISOString()
+        }]);
+      }
+      setIsEditing(false);
+      setCurrentNote(null);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    setNotes(notes.filter(note => note.id !== id));
+    if (currentNote?.id === id) {
+      setCurrentNote(null);
+      setIsEditing(false);
+    }
+  };
+
+  const createNewNote = () => {
+    setCurrentNote({
+      id: '',
+      title: '',
+      content: '',
+      createdAt: new Date().toISOString()
+    });
+    setIsEditing(true);
+  };
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold mb-2 cyber-text text-[#00ff9d]">メモ帳</h2>
+        <p className="text-gray-400">システム管理用メモを保存</p>
+      </div>
+
+      <div className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-8">
+        <div className="mb-6 flex justify-between items-center">
+          <h3 className="text-xl font-semibold text-[#00ff9d]">保存されたメモ</h3>
+          <button
+            onClick={createNewNote}
+            className="flex items-center space-x-2 px-4 py-2 cyber-border bg-[#00ff9d]/10 rounded-lg hover:bg-[#00ff9d]/20 transition-all duration-300"
+          >
+            <Plus className="w-4 h-4 text-[#00ff9d]" />
+            <span className="text-[#00ff9d]">新規作成</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-8">
+          <div className="col-span-1 space-y-4 cyber-border bg-gray-900/80 p-4 rounded-lg h-[calc(100vh-20rem)] overflow-y-auto">
+            {notes.map(note => (
+              <div
+                key={note.id}
+                onClick={() => {
+                  setCurrentNote(note);
+                  setIsEditing(false);
+                }}
+                className={`cursor-pointer p-4 rounded-lg transition-all duration-300 ${
+                  currentNote?.id === note.id
+                    ? 'cyber-border bg-[#00ff9d]/10'
+                    : 'hover:bg-gray-800/50'
+                }`}
+              >
+                <h4 className="text-[#00ff9d] font-medium mb-2 truncate">{note.title}</h4>
+                <p className="text-gray-400 text-sm truncate">{note.content}</p>
+                <p className="text-gray-500 text-xs mt-2">
+                  {new Date(note.createdAt).toLocaleDateString('ja-JP')}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="col-span-2">
+            {currentNote && (
+              <div className="cyber-border bg-gray-900/80 p-6 rounded-lg h-[calc(100vh-20rem)]">
+                <div className="flex justify-between items-center mb-6">
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={currentNote.title}
+                      onChange={(e) => setCurrentNote({ ...currentNote, title: e.target.value })}
+                      disabled={!isEditing}
+                      placeholder="タイトルを入力"
+                      className="w-full bg-transparent text-xl font-semibold text-[#00ff9d] border-b border-[#00ff9d]/30 pb-2 focus:outline-none focus:border-[#00ff9d]"
+                    />
+                  </div>
+                  <div className="flex space-x-2">
+                    {isEditing ? (
+                      <>
+                        <button
+                          onClick={handleSave}
+                          className="flex items-center space-x-2 px-4 py-2 cyber-border bg-[#00ff9d]/10 rounded-lg hover:bg-[#00ff9d]/20 transition-all duration-300"
+                        >
+                          <Save className="w-4 h-4 text-[#00ff9d]" />
+                          <span className="text-[#00ff9d]">保存</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditing(false);
+                            if (!currentNote.id) {
+                              setCurrentNote(null);
+                            }
+                          }}
+                          className="p-2 cyber-border bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-all duration-300"
+                        >
+                          <X className="w-4 h-4 text-gray-400" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          className="px-4 py-2 cyber-border bg-[#00ff9d]/10 rounded-lg hover:bg-[#00ff9d]/20 transition-all duration-300 text-[#00ff9d]"
+                        >
+                          編集
+                        </button>
+                        <button
+                          onClick={() => handleDelete(currentNote.id)}
+                          className="p-2 cyber-border bg-red-900/20 rounded-lg hover:bg-red-900/40 transition-all duration-300"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <textarea
+                  value={currentNote.content}
+                  onChange={(e) => setCurrentNote({ ...currentNote, content: e.target.value })}
+                  disabled={!isEditing}
+                  placeholder="メモを入力"
+                  className="w-full h-[calc(100%-5rem)] bg-transparent text-gray-300 resize-none focus:outline-none"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Notepad;
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/src/components/FileTransfer.tsx</ファイルパス>
+<ファイル中身>
+import React, { useState } from 'react';
+import { Upload, Download, Server, HardDrive } from 'lucide-react';
+
+function FileTransfer() {
+  const [host, setHost] = useState('');
+  const [path, setPath] = useState('');
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold mb-2 cyber-text text-[#00ff9d]">ファイル転送</h2>
+        <p className="text-gray-400">セキュアなファイル転送システム</p>
+      </div>
+
+      <div className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-8">
+        <div className="grid grid-cols-2 gap-8 mb-8">
+          <div className="space-y-6">
+            <label className="block">
+              <span className="text-[#00ff9d] mb-2 block">ホスト名</span>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Server className="h-5 w-5 text-[#00ff9d]" />
+                </div>
+                <input
+                  type="text"
+                  value={host}
+                  onChange={(e) => setHost(e.target.value)}
+                  className="bg-gray-900/80 block w-full pl-10 pr-3 py-2 rounded-lg cyber-border border-[#00ff9d]/30 focus:border-[#00ff9d] transition-colors outline-none text-gray-300"
+                  placeholder="例: ssh.example.com"
+                />
+              </div>
+            </label>
+
+            <label className="block">
+              <span className="text-[#00ff9d] mb-2 block">リモートパス</span>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <HardDrive className="h-5 w-5 text-[#00ff9d]" />
+                </div>
+                <input
+                  type="text"
+                  value={path}
+                  onChange={(e) => setPath(e.target.value)}
+                  className="bg-gray-900/80 block w-full pl-10 pr-3 py-2 rounded-lg cyber-border border-[#00ff9d]/30 focus:border-[#00ff9d] transition-colors outline-none text-gray-300"
+                  placeholder="/home/user/files"
+                />
+              </div>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-center space-x-6">
+            <button className="flex flex-col items-center p-6 cyber-border bg-gray-900/80 rounded-lg hover:bg-[#00ff9d]/10 transition-all duration-300 group">
+              <Upload className="w-12 h-12 mb-3 text-[#00ff9d] group-hover:animate-pulse" />
+              <span className="text-[#00ff9d]">アップロード</span>
+            </button>
+            <button className="flex flex-col items-center p-6 cyber-border bg-gray-900/80 rounded-lg hover:bg-[#00ff9d]/10 transition-all duration-300 group">
+              <Download className="w-12 h-12 mb-3 text-[#00ff9d] group-hover:animate-pulse" />
+              <span className="text-[#00ff9d]">ダウンロード</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="border-t border-[#00ff9d]/20 pt-6">
+          <h3 className="text-xl font-semibold mb-4 text-[#00ff9d]">転送履歴</h3>
+          <div className="bg-gray-900/80 cyber-border rounded-lg p-4 h-64 overflow-y-auto">
+            <p className="text-gray-400 text-center">転送履歴はありません</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default FileTransfer;
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/src/components/Login.tsx</ファイルパス>
+<ファイル中身>
+import React, { useState } from 'react';
+import { Power } from 'lucide-react';
+
+interface LoginProps {
+  onLogin: () => void;
+}
+
+function Login({ onLogin }: LoginProps) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Basic authentication check - in a real app, this would be more secure
+    if (username === 'admin' && password === 'password') {
+      onLogin();
+    } else {
+      setError('ユーザー名またはパスワードが正しくありません');
+    }
+  };
+
+  return (
+    <div className="min-h-screen cyber-gradient flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-8">
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center mb-4">
+              <Power className="w-12 h-12 text-[#00ff9d] mr-4" />
+              <h1 className="text-3xl font-bold cyber-text text-[#00ff9d]">HOME CONSOLE</h1>
+            </div>
+            <p className="text-gray-400">システムにログインしてください</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="cyber-border bg-red-900/20 text-red-400 p-3 rounded-lg text-center">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[#00ff9d] mb-2" htmlFor="username">
+                ユーザー名
+              </label>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-gray-900/80 p-3 rounded-lg cyber-border border-[#00ff9d]/30 text-gray-300 focus:border-[#00ff9d] transition-colors outline-none"
+                placeholder="ユーザー名を入力"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[#00ff9d] mb-2" htmlFor="password">
+                パスワード
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-gray-900/80 p-3 rounded-lg cyber-border border-[#00ff9d]/30 text-gray-300 focus:border-[#00ff9d] transition-colors outline-none"
+                placeholder="パスワードを入力"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full cyber-border bg-[#00ff9d]/10 hover:bg-[#00ff9d]/20 text-[#00ff9d] p-3 rounded-lg transition-all duration-300"
+            >
+              ログイン
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Login;
+</ファイル中身>
+
+<ファイルパス>/home/nishio/project/src/components/LocalTerminal.tsx</ファイルパス>
+<ファイル中身>
+import React, { useEffect, useRef } from 'react';
+import { Terminal as XTerm } from 'xterm';
+import { FitAddon } from 'xterm-addon-fit';
+import { WebLinksAddon } from 'xterm-addon-web-links';
+import { WebglAddon } from 'xterm-addon-webgl';
+import 'xterm/css/xterm.css';
+
+function LocalTerminal() {
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const xtermRef = useRef<XTerm | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+
+  useEffect(() => {
+    if (terminalRef.current && !xtermRef.current) {
+      const term = new XTerm({
+        theme: {
+          background: '#0a0b14',
+          foreground: '#00ff9d',
+          cursor: '#00ff9d',
+          selection: 'rgba(0, 255, 157, 0.3)',
+          black: '#1a1b26',
+          blue: '#7aa2f7',
+          cyan: '#7dcfff',
+          green: '#00ff9d',
+          magenta: '#bb9af7',
+          red: '#f7768e',
+          white: '#c0caf5',
+          yellow: '#e0af68'
+        },
+        fontSize: 14,
+        fontFamily: 'monospace',
+        cursorBlink: true,
+        allowTransparency: true
+      });
+      
+      const fitAddon = new FitAddon();
+      const webLinksAddon = new WebLinksAddon();
+      const webglAddon = new WebglAddon();
+      
+      term.loadAddon(fitAddon);
+      term.loadAddon(webLinksAddon);
+      term.loadAddon(webglAddon);
+      
+      xtermRef.current = term;
+      fitAddonRef.current = fitAddon;
+      
+      term.open(terminalRef.current);
+      
+      setTimeout(() => {
+        fitAddon.fit();
+      }, 0);
+
+      term.writeln('\x1b[32m╔════════════════════════════════════╗\x1b[0m');
+      term.writeln('\x1b[32m║    HOME CONSOLE - LOCAL TERMINAL   ║\x1b[0m');
+      term.writeln('\x1b[32m╚════════════════════════════════════╝\x1b[0m');
+      term.writeln('');
+      term.writeln('\x1b[36mローカルターミナルに接続しました\x1b[0m');
+      term.writeln('\x1b[33m$ \x1b[0m');
+
+      const handleResize = () => {
+        if (fitAddonRef.current) {
+          fitAddonRef.current.fit();
+        }
+      };
+
+      window.addEventListener('resize', handleResize);
+
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        if (xtermRef.current) {
+          xtermRef.current.dispose();
+        }
+      };
+    }
+  }, []);
+
+  return (
+    <div className="h-full">
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold mb-2 cyber-text text-[#00ff9d]">ローカルターミナル</h2>
+        <p className="text-gray-400">マイコンソールサーバーのターミナル</p>
+      </div>
+      
+      <div className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-4 h-[calc(100vh-12rem)] relative terminal-container">
+        <div ref={terminalRef} className="h-full" />
+      </div>
+    </div>
+  );
+}
+
+export default LocalTerminal;
+</ファイル中身>
+
