@@ -1,4 +1,4 @@
-// server.js (デバッグ強化版)
+// server.js (鍵認証対応版 - 修正済み)
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
@@ -14,6 +14,9 @@ if (!fs.existsSync(logDir)) {
 
 const logFile = path.join(logDir, `ssh-server-${new Date().toISOString().replace(/[:.]/g, '-')}.log`);
 const logStream = fs.createWriteStream(logFile, { flags: 'a' });
+
+// 秘密鍵のパス
+const PRIVATE_KEY_PATH = path.join(__dirname, 'keys', 'id_rsa');
 
 // ログ関数
 function log(message, type = 'INFO') {
@@ -85,6 +88,34 @@ app.get('/api/stats', (req, res) => {
   res.json(stats);
 });
 
+// 秘密鍵を読み込む関数
+function loadPrivateKey() {
+  try {
+    if (fs.existsSync(PRIVATE_KEY_PATH)) {
+      const keyData = fs.readFileSync(PRIVATE_KEY_PATH, 'utf8');
+
+      // 鍵の形式をチェック - OpenSSH形式の秘密鍵かどうか確認
+      if (!keyData.includes('-----BEGIN') || !keyData.includes('KEY-----')) {
+        log(`警告: 秘密鍵の形式が正しくない可能性があります。OpenSSH形式の秘密鍵を使用してください。`, 'WARN');
+      }
+      
+      // もし鍵にパスフレーズがある場合は警告
+      if (keyData.includes('ENCRYPTED')) {
+        log(`警告: 秘密鍵がパスフレーズで保護されています。無効なパスフレーズのない鍵を使用してください。`, 'WARN');
+      }
+      
+      log(`秘密鍵を読み込みました (サイズ: ${keyData.length} バイト)`, 'DEBUG');
+      return keyData;
+    } else {
+      log(`秘密鍵ファイルが見つかりません: ${PRIVATE_KEY_PATH}`, 'WARN');
+      return null;
+    }
+  } catch (error) {
+    logError(`秘密鍵の読み込みエラー`, error);
+    return null;
+  }
+}
+
 wss.on('connection', (ws, req) => {
   const connectionId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
   const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -93,13 +124,15 @@ wss.on('connection', (ws, req) => {
   try {
     const url = new URL(`http://localhost${req.url}`);
     const host = url.searchParams.get('host');
-    const username = url.searchParams.get('username');
+    const username = url.searchParams.get('username') || 'myconsole'; // デフォルトでmyconsoleを使用
+    const usePassword = url.searchParams.get('usePassword') === 'true';
+    const password = url.searchParams.get('password');
     
-    log(`接続パラメータ - ホスト: ${host}, ユーザー: ${username}`);
+    log(`接続パラメータ - ホスト: ${host}, ユーザー: ${username}, パスワード認証: ${usePassword}`);
     
-    if (!host || !username) {
-      log(`パラメータ不足 - ホスト: ${host}, ユーザー: ${username}`, 'WARN');
-      ws.send('\x1b[31mエラー: ホスト名またはユーザー名が指定されていません\x1b[0m\r\n');
+    if (!host) {
+      log(`パラメータ不足 - ホスト: ${host}`, 'WARN');
+      ws.send('\x1b[31mエラー: ホスト名が指定されていません\x1b[0m\r\n');
       ws.close();
       return;
     }
@@ -257,15 +290,46 @@ wss.on('connection', (ws, req) => {
       // デバッグモードを有効化
       debug: (message) => log(`SSH Debug: ${message}`, 'DEBUG'),
       // キーボードインタラクティブ認証を許可
-      tryKeyboard: true,
-      // デバッグするために認証方法を無効化 (実際の接続ではコメントアウト)
-      // password: 'デモパスワード',
-      // 認証失敗を許容する最大試行回数
-      authHandler: function(methodsLeft, partialSuccess, callback) {
-        log(`認証メソッド残り: ${methodsLeft.join(', ')}`, 'DEBUG');
-        callback(); // 次の認証方法を試す
-      }
+      tryKeyboard: true
     };
+
+    // 認証方法の設定
+    if (usePassword && password) {
+      // パスワード認証
+      log(`パスワード認証を使用: ${connectionId}`, 'DEBUG');
+      connectConfig.password = password;
+    } else {
+      // 秘密鍵認証
+      const privateKey = loadPrivateKey();
+      if (privateKey) {
+        log(`鍵認証を使用: ${connectionId}`, 'DEBUG');
+        connectConfig.privateKey = privateKey;
+
+    // 鍵認証するときは authHandler を削除
+    // authHandler が設定されていると、先に進めない場合がある
+    delete connectConfig.authHandler;
+      } else {
+        ws.send('\x1b[31mエラー: 秘密鍵が見つかりません\x1b[0m\r\n');
+        ws.close();
+        activeConnections.delete(connectionId);
+        return;
+      }
+    }
+    
+    // パスワード認証の場合のみ authHandler を設定
+    if (usePassword && password) {
+      // 認証ハンドラ - エラーが出る場合は完全に無効化することも検討
+      connectConfig.authHandler = function(methodsLeft, partialSuccess, callback) {
+      // methodsLeft が null または undefined の場合の対処
+        if (!methodsLeft) {
+          log(`認証メソッド残り: なし`, 'DEBUG');
+        } else {
+        log(`認証メソッド残り: ${methodsLeft.join(', ')}`, 'DEBUG');
+      }
+      // 常に進む
+    callback();
+    };
+}
     
     // ホストキーの確認をバイパス (開発環境のみ)
     connectConfig.hostVerifier = function() { return true; };
@@ -319,4 +383,20 @@ const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   log(`WebSocketサーバーがポート${PORT}で起動しました`);
   log(`ログファイル: ${logFile}`);
+
+  // 秘密鍵の存在チェック
+  if (!fs.existsSync(PRIVATE_KEY_PATH)) {
+    log(`警告: 秘密鍵ファイル(${PRIVATE_KEY_PATH})が見つかりません。keysディレクトリを作成し、id_rsaファイルを配置してください。`, 'WARN');
+    
+    // keysディレクトリを自動作成
+    const keysDir = path.join(__dirname, 'keys');
+    if (!fs.existsSync(keysDir)) {
+      try {
+        fs.mkdirSync(keysDir);
+        log(`keysディレクトリを作成しました: ${keysDir}`);
+      } catch (err) {
+        logError(`keysディレクトリの作成に失敗しました`, err);
+      }
+    }
+  }
 });
