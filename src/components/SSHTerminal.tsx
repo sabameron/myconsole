@@ -1,10 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Terminal as XTerm } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
-import { WebLinksAddon } from 'xterm-addon-web-links';
-import { WebglAddon } from 'xterm-addon-webgl';
+import React, { useState } from 'react';
+import Terminal from 'react-console-emulator';
 import { Plus, Trash2, Power } from 'lucide-react';
-import 'xterm/css/xterm.css';
 
 interface Server {
   id: string;
@@ -14,85 +10,27 @@ interface Server {
 
 function SSHTerminal() {
   const [servers, setServers] = useState<Server[]>(() => {
-    const saved = localStorage.getItem('sshServers');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('sshServers');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Error loading servers from localStorage:', e);
+      return [];
+    }
   });
   
   const [selectedServer, setSelectedServer] = useState<Server | null>(null);
   const [isAddingServer, setIsAddingServer] = useState(false);
   const [newServer, setNewServer] = useState({ name: '', host: '' });
-  
-  const terminalRef = useRef<HTMLDivElement>(null);
-  const xtermRef = useRef<XTerm | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
+  const terminalRef = React.useRef<any>(null);
 
-  useEffect(() => {
-    localStorage.setItem('sshServers', JSON.stringify(servers));
-  }, [servers]);
-
-  useEffect(() => {
-    if (terminalRef.current && !xtermRef.current) {
-      const term = new XTerm({
-        theme: {
-          background: '#0a0b14',
-          foreground: '#00ff9d',
-          cursor: '#00ff9d',
-          selection: 'rgba(0, 255, 157, 0.3)',
-          black: '#1a1b26',
-          blue: '#7aa2f7',
-          cyan: '#7dcfff',
-          green: '#00ff9d',
-          magenta: '#bb9af7',
-          red: '#f7768e',
-          white: '#c0caf5',
-          yellow: '#e0af68'
-        },
-        fontSize: 14,
-        fontFamily: 'monospace',
-        cursorBlink: true,
-        allowTransparency: true
-      });
-      
-      const fitAddon = new FitAddon();
-      const webLinksAddon = new WebLinksAddon();
-      const webglAddon = new WebglAddon();
-      
-      term.loadAddon(fitAddon);
-      term.loadAddon(webLinksAddon);
-      term.loadAddon(webglAddon);
-      
-      xtermRef.current = term;
-      fitAddonRef.current = fitAddon;
-      
-      term.open(terminalRef.current);
-      
-      setTimeout(() => {
-        fitAddon.fit();
-      }, 0);
-
-      term.writeln('\x1b[32m╔════════════════════════════════════╗\x1b[0m');
-      term.writeln('\x1b[32m║      HOME CONSOLE - SSH TERMINAL    ║\x1b[0m');
-      term.writeln('\x1b[32m╚════════════════════════════════════╝\x1b[0m');
-      term.writeln('');
-      term.writeln('\x1b[36m接続待機中...\x1b[0m');
-      term.writeln('\x1b[33mサーバーを選択してください\x1b[0m');
-
-      const handleResize = () => {
-        if (fitAddonRef.current) {
-          fitAddonRef.current.fit();
-        }
-      };
-
-      window.addEventListener('resize', handleResize);
-
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        if (xtermRef.current) {
-          xtermRef.current.dispose();
-        }
-      };
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('sshServers', JSON.stringify(servers));
+    } catch (e) {
+      console.error('Error saving servers to localStorage:', e);
     }
-  }, []);
+  }, [servers]);
 
   const handleAddServer = () => {
     if (newServer.name && newServer.host) {
@@ -111,10 +49,55 @@ function SSHTerminal() {
 
   const handleConnect = (server: Server) => {
     setSelectedServer(server);
-    if (xtermRef.current) {
-      xtermRef.current.clear();
-      xtermRef.current.writeln(`\x1b[36m${server.name} (${server.host}) に接続中...\x1b[0m`);
-      // Here you would implement the actual SSH connection
+    if (terminalRef.current) {
+      terminalRef.current.clearStdout();
+      terminalRef.current.pushToStdout(`\x1b[36m${server.name} (${server.host}) に接続中...\x1b[0m`);
+    }
+  };
+
+  const commands = {
+    echo: {
+      description: 'Echo a passed string.',
+      usage: 'echo <string>',
+      fn: (...args: string[]) => args.join(' ')
+    },
+    ssh: {
+      description: 'Connect to SSH host',
+      usage: 'ssh <user@host>',
+      fn: (...args: string[]) => {
+        if (args.length === 0) return 'Usage: ssh username@hostname';
+        return `Connecting to ${args.join(' ')}...`;
+      }
+    },
+    ls: {
+      description: 'List directory contents',
+      usage: 'ls [directory]',
+      fn: () => 'file1 file2 file3'
+    },
+    cd: {
+      description: 'Change directory',
+      usage: 'cd <directory>',
+      fn: (dir: string) => `Changed directory to ${dir || '/'}`
+    },
+    pwd: {
+      description: 'Print working directory',
+      usage: 'pwd',
+      fn: () => '/home/nishio'
+    },
+    vim: {
+      description: 'Open file in Vim editor',
+      usage: 'vim <filename>',
+      fn: (filename: string) => `Opening ${filename || 'new file'} in vim...`
+    },
+    whoami: {
+      description: 'Display current user',
+      usage: 'whoami',
+      fn: () => 'nishio'
+    },
+    date: {
+      description: 'Show current date and time',
+      usage: 'date',
+      fn: () => new Date().toLocaleString()
     }
   };
 
@@ -212,7 +195,33 @@ function SSHTerminal() {
 
         <div className="col-span-3">
           <div className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-4 h-[calc(100vh-12rem)] relative terminal-container">
-            <div ref={terminalRef} className="h-full" />
+            <Terminal
+              ref={terminalRef}
+              commands={commands}
+              welcomeMessage={selectedServer 
+                ? `${selectedServer.name} (${selectedServer.host}) に接続中...` 
+                : "サーバーを選択して接続してください。接続後は「help」と入力してコマンド一覧を表示できます。"}
+              promptLabel={selectedServer 
+                ? `nishio@${selectedServer.host}:~$ ` 
+                : "$ "}
+              styleEchoBack="fullInherit"
+              contentStyle={{ color: '#00ff9d' }}
+              promptLabelStyle={{ color: '#00ff9d' }}
+              inputTextStyle={{ color: '#00ff9d' }}
+              messageStyle={{ color: '#00ff9d' }}
+              scrollBehavior="auto"
+              noDefaults
+              autoFocus
+              style={{
+                maxHeight: "100%",
+                minHeight: "100%",
+                overflow: "auto",
+                backgroundColor: 'rgba(10, 11, 20, 0.8)',
+                fontFamily: 'monospace',
+                fontSize: '14px',
+                padding: '10px'
+              }}
+            />
           </div>
         </div>
       </div>

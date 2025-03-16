@@ -14,7 +14,7 @@ import codecs
 TARGET_EXTENSIONS = [".js",".tsx",".html",".ts"]
 
 # 除外するディレクトリのリスト
-EXCLUDE_DIRS = ['.git','logs','old','venv','__pycache__', 'venv', 'migrations', 'static','assets']
+EXCLUDE_DIRS = ['.git','logs','old','venv','__pycache__', 'venv', 'migrations', 'static','assets','node_modules']
 # EXCLUDE_DIRS = ['.git','logs','old','venv','__pycache__', 'venv', 'migrations'] #staticフォルダを除外しない
 
 # ファイル階層を表示するファイルの拡張子リスト

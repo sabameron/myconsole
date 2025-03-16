@@ -24,6 +24,25 @@
   pointer-events: none;
 }
 
+.terminal-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.terminal-container > div {
+  height: 100%;
+  width: 100%;
+}
+
+.terminal-container .xterm {
+  height: 100%;
+  width: 100%;
+}
+
+.terminal-container .xterm-viewport {
+  overflow-y: auto;
+}
+
 .cyber-gradient {
   background: linear-gradient(135deg, #1a1b26 0%, #1f2937 100%);
 }
