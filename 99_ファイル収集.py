@@ -21,7 +21,7 @@ EXCLUDE_DIRS = ['.git','logs','old','venv','__pycache__', 'venv', 'migrations', 
 TARGET_EXTENSIONS2 = ['.py', '.html', '.css', '.js']
 
 # ファイル階層を表示する際に除外するディレクトリのリスト
-EXCLUDE_DIRS2 = ['.git','logs','old','venv','__pycache__', 'venv', 'migrations', 'static']
+EXCLUDE_DIRS2 = ['.git','logs','old','venv','__pycache__', 'venv', 'migrations', 'static', 'node_modules']
 
 print(f"{TARGET_EXTENSIONS}のファイルを収集します。（{EXCLUDE_DIRS}を除く）")
 def collect_files(root_dir):

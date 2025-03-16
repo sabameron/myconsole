@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
-import Terminal from 'react-console-emulator';
+// SSHTerminal.tsx の xterm 直接使用バージョン
+import React, { useState, useEffect, useRef } from 'react';
+import { Terminal } from 'xterm';
+import { FitAddon } from 'xterm-addon-fit';
+import { WebLinksAddon } from 'xterm-addon-web-links';
 import { Plus, Trash2, Power } from 'lucide-react';
+import 'xterm/css/xterm.css';
 
 interface Server {
   id: string;
@@ -22,15 +26,113 @@ function SSHTerminal() {
   const [selectedServer, setSelectedServer] = useState<Server | null>(null);
   const [isAddingServer, setIsAddingServer] = useState(false);
   const [newServer, setNewServer] = useState({ name: '', host: '' });
-  const terminalRef = React.useRef<any>(null);
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const xtermRef = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     try {
       localStorage.setItem('sshServers', JSON.stringify(servers));
     } catch (e) {
       console.error('Error saving servers to localStorage:', e);
     }
   }, [servers]);
+
+  useEffect(() => {
+    // ターミナルのDOM要素が準備できているか確認
+    if (terminalRef.current && !xtermRef.current) {
+      // 少し遅延させてDOMの準備を待つ
+      setTimeout(() => {
+        try {
+          // ターミナルの初期化
+          const term = new Terminal({
+            theme: {
+              background: '#0a0b14',
+              foreground: '#00ff9d',
+              cursor: '#00ff9d',
+              selection: 'rgba(0, 255, 157, 0.3)',
+              black: '#1a1b26',
+              blue: '#7aa2f7',
+              cyan: '#7dcfff',
+              green: '#00ff9d',
+              magenta: '#bb9af7',
+              red: '#f7768e',
+              white: '#c0caf5',
+              yellow: '#e0af68'
+            },
+            fontSize: 14,
+            fontFamily: 'monospace',
+            cursorBlink: true,
+            allowTransparency: true
+          });
+          
+          const fitAddon = new FitAddon();
+          const webLinksAddon = new WebLinksAddon();
+          
+          term.loadAddon(fitAddon);
+          term.loadAddon(webLinksAddon);
+          
+          xtermRef.current = term;
+          fitAddonRef.current = fitAddon;
+          
+          term.open(terminalRef.current);
+          
+          // ターミナルが開かれた後、十分な遅延を入れてからfit実行
+          setTimeout(() => {
+            if (fitAddonRef.current) {
+              try {
+                fitAddonRef.current.fit();
+              } catch (e) {
+                console.error('Error fitting terminal:', e);
+              }
+            }
+          }, 300);
+
+          term.writeln('\x1b[32m╔════════════════════════════════════╗\x1b[0m');
+          term.writeln('\x1b[32m║      HOME CONSOLE - SSH TERMINAL    ║\x1b[0m');
+          term.writeln('\x1b[32m╚════════════════════════════════════╝\x1b[0m');
+          term.writeln('');
+          term.writeln('\x1b[36m接続待機中...\x1b[0m');
+          term.writeln('\x1b[33mサーバーを選択してください\x1b[0m');
+
+          const handleResize = () => {
+            if (fitAddonRef.current) {
+              try {
+                fitAddonRef.current.fit();
+              } catch (e) {
+                console.error('Error fitting terminal on resize:', e);
+              }
+            }
+          };
+
+          window.addEventListener('resize', handleResize);
+
+          return () => {
+            window.removeEventListener('resize', handleResize);
+            
+            // 接続を閉じる
+            if (wsRef.current) {
+              wsRef.current.close();
+              wsRef.current = null;
+            }
+            
+            // ターミナルの破棄
+            if (xtermRef.current) {
+              try {
+                xtermRef.current.dispose();
+              } catch (e) {
+                console.error('Error disposing terminal:', e);
+              }
+              xtermRef.current = null;
+            }
+          };
+        } catch (error) {
+          console.error('Terminal initialization error:', error);
+        }
+      }, 100);
+    }
+  }, []);
 
   const handleAddServer = () => {
     if (newServer.name && newServer.host) {
@@ -47,57 +149,69 @@ function SSHTerminal() {
     }
   };
 
-  const handleConnect = (server: Server) => {
+  const handleConnect = async (server: Server) => {
     setSelectedServer(server);
-    if (terminalRef.current) {
-      terminalRef.current.clearStdout();
-      terminalRef.current.pushToStdout(`\x1b[36m${server.name} (${server.host}) に接続中...\x1b[0m`);
-    }
-  };
-
-  const commands = {
-    echo: {
-      description: 'Echo a passed string.',
-      usage: 'echo <string>',
-      fn: (...args: string[]) => args.join(' ')
-    },
-    ssh: {
-      description: 'Connect to SSH host',
-      usage: 'ssh <user@host>',
-      fn: (...args: string[]) => {
-        if (args.length === 0) return 'Usage: ssh username@hostname';
-        return `Connecting to ${args.join(' ')}...`;
+    
+    if (xtermRef.current) {
+      // 既存の接続を閉じる
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
       }
-    },
-    ls: {
-      description: 'List directory contents',
-      usage: 'ls [directory]',
-      fn: () => 'file1 file2 file3'
-    },
-    cd: {
-      description: 'Change directory',
-      usage: 'cd <directory>',
-      fn: (dir: string) => `Changed directory to ${dir || '/'}`
-    },
-    pwd: {
-      description: 'Print working directory',
-      usage: 'pwd',
-      fn: () => '/home/nishio'
-    },
-    vim: {
-      description: 'Open file in Vim editor',
-      usage: 'vim <filename>',
-      fn: (filename: string) => `Opening ${filename || 'new file'} in vim...`
-    },
-    whoami: {
-      description: 'Display current user',
-      usage: 'whoami',
-      fn: () => 'nishio'
-    },
-    date: {
-      description: 'Show current date and time',
-      usage: 'date',
-      fn: () => new Date().toLocaleString()
+      
+      // ターミナルをクリアして接続メッセージを表示
+      xtermRef.current.clear();
+      xtermRef.current.writeln(`\x1b[36m${server.name} (${server.host}) に接続中...\x1b[0m`);
+      
+      try {
+        // WebSocketのURLを修正 - /ws プロキシを使用する
+        const socket = new WebSocket(`ws://${window.location.host}/ws?host=${server.host}&username=nishio`);
+        wsRef.current = socket;
+        
+        // WebSocketの接続が開いたときの処理
+        socket.onopen = () => {
+          console.log('WebSocket接続が開きました');
+          if (xtermRef.current) {
+            xtermRef.current.writeln('\x1b[32mWebSocket接続が確立されました\x1b[0m');
+          }
+        };
+        
+        // WebSocketからメッセージを受信したときの処理
+        socket.onmessage = (event) => {
+          if (xtermRef.current) {
+            xtermRef.current.write(event.data);
+          }
+        };
+        
+        // エラー発生時の処理
+        socket.onerror = (error) => {
+          console.error('WebSocket Error:', error);
+          if (xtermRef.current) {
+            xtermRef.current.writeln('\x1b[31mエラー: 接続に失敗しました\x1b[0m');
+          }
+        };
+        
+        // 接続が閉じられたときの処理
+        socket.onclose = () => {
+          if (xtermRef.current) {
+            xtermRef.current.writeln('\x1b[31m接続が閉じられました\x1b[0m');
+          }
+        };
+        
+        // ユーザー入力をWebSocketに送信
+        if (xtermRef.current) {
+          xtermRef.current.onData((data) => {
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(data);
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Connection error:', error);
+        if (xtermRef.current) {
+          xtermRef.current.writeln('\x1b[31mエラー: サーバーに接続できません\x1b[0m');
+        }
+      }
     }
   };
 
@@ -195,33 +309,7 @@ function SSHTerminal() {
 
         <div className="col-span-3">
           <div className="cyber-border bg-gray-900/50 backdrop-blur-sm rounded-lg p-4 h-[calc(100vh-12rem)] relative terminal-container">
-            <Terminal
-              ref={terminalRef}
-              commands={commands}
-              welcomeMessage={selectedServer 
-                ? `${selectedServer.name} (${selectedServer.host}) に接続中...` 
-                : "サーバーを選択して接続してください。接続後は「help」と入力してコマンド一覧を表示できます。"}
-              promptLabel={selectedServer 
-                ? `nishio@${selectedServer.host}:~$ ` 
-                : "$ "}
-              styleEchoBack="fullInherit"
-              contentStyle={{ color: '#00ff9d' }}
-              promptLabelStyle={{ color: '#00ff9d' }}
-              inputTextStyle={{ color: '#00ff9d' }}
-              messageStyle={{ color: '#00ff9d' }}
-              scrollBehavior="auto"
-              noDefaults
-              autoFocus
-              style={{
-                maxHeight: "100%",
-                minHeight: "100%",
-                overflow: "auto",
-                backgroundColor: 'rgba(10, 11, 20, 0.8)',
-                fontFamily: 'monospace',
-                fontSize: '14px',
-                padding: '10px'
-              }}
-            />
+            <div ref={terminalRef} className="h-full w-full" />
           </div>
         </div>
       </div>
